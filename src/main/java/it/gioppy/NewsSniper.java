@@ -40,7 +40,6 @@ public class NewsSniper {
                     switch (messageText.toLowerCase()) {
                         case "start":
                             bot.execute(new SendMessage(chatId, "Benvenuto!"));
-
                             chatIds.add(chatId);
                             ChatStorage.saveChatIds(chatIds);
                             break;

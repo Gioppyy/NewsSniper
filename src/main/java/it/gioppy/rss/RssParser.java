@@ -20,6 +20,10 @@ public class RssParser {
         return this;
     }
 
+    public RssParser build() {
+        return this;
+    }
+
     public News getNews() throws IOException {
         Element i = Jsoup.connect(url).get().select("item").get(0);
         link = new News(

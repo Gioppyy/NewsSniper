@@ -36,7 +36,11 @@ public class ActionManager {
 
     public void sendNews(String url) {
         try {
-            News n = new RssParser().setUrl(url).getNews();
+            RssParser pr = new RssParser()
+                    .setUrl(url)
+                    .build();
+
+            News n = pr.getNews();
             String msg = String.format("Titolo: \n%s\n\nDescrizione: \n%s\n\nUrl: \n%s\n\nData: \n%s",
                     n.getTitle(), n.getDescription(), n.getUrl(), n.getDate());
 
