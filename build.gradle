@@ -1,0 +1,21 @@
+plugins {
+    id 'groovy'
+}
+
+group = 'it.gioppy'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.jsoup:jsoup:1.15.4'
+    implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
+    compileOnly 'org.projectlombok:lombok:1.18.36'
+    annotationProcessor 'org.projectlombok:lombok:1.18.36'
+}
+
+test {
+    useJUnitPlatform()
+}
