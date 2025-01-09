@@ -14,11 +14,12 @@ import lombok.Getter;
 
 public class NewsSniper {
     @Getter
-    private static final TelegramBot bot = new TelegramBot(Secret.token);
+    private static final ScheduledExecutorService sex = new ScheduledThreadPoolExecutor(2);
     @Getter
     private static final HashSet<Long> chatIds = ChatStorage.loadChatIds();
+    @Getter
+    private static final TelegramBot bot = new TelegramBot(Secret.token);
 
-    private static final ScheduledExecutorService sex = new ScheduledThreadPoolExecutor(2);
     private static final List<String> urls = List.of(
             "https://feeds.bbci.co.uk/news/world/rss.xml"
     );
@@ -35,6 +36,7 @@ public class NewsSniper {
                 if (update.message() != null && update.message().text() != null) {
                     String messageText = update.message().text();
                     long chatId = update.message().chat().id();
+                    System.out.println(update.message().messageId() + " " + update.message().chat().id());
 
                     switch (messageText.toLowerCase()) {
                         case "/start":
@@ -43,12 +45,16 @@ public class NewsSniper {
                             ChatStorage.saveChatIds(chatIds);
                             break;
                         case "/clear":
-                            am.clearMessages(chatId);
-                            bot.execute(new SendMessage(chatId, "Tutte le news sono state eliminate!"));
+                            final int size = update.message().messageId();
+                            am.clearMessages(chatId, size).join();
+                            bot.execute(new SendMessage(chatId, "Tutta la chat è stata cancellata!"));
                             break;
                         case "/stop":
                             bot.execute(new SendMessage(chatId, "Bot fermato!"));
                             am.StopBot(chatId);
+                            break;
+                        default:
+                            bot.execute(new SendMessage(chatId, "[DEBUG] Il bot funziona!"));
                             break;
                     }
                 }
