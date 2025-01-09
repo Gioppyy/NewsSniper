@@ -1,30 +1,21 @@
 package it.gioppy;
 
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.DeleteMessage;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendMessage;
-import it.gioppy.rss.News;
-import it.gioppy.rss.RssParser;
+import com.pengrad.telegrambot.TelegramBot;
 import it.gioppy.storage.ChatStorage;
-
-import java.util.HashMap;
+import it.gioppy.rss.RssParser;
 import java.util.HashSet;
-import java.util.Map;
 
 public class ActionManager {
     private final HashSet<Long> chatIds = NewsSniper.getChatIds();
-    private final TelegramBot bot = NewsSniper.getBot();
-
-    private final HashMap<Long, Integer> sentMessageIds = new HashMap<>();
     private final HashSet<String> lastNews = new HashSet<>();
+    private final TelegramBot bot = NewsSniper.getBot();
 
     public ActionManager() {}
 
     public void clearMessages(long chatId) {
-        sentMessageIds.entrySet().parallelStream()
-                .filter((msgId) -> msgId.getKey() == chatId)
-                .map(Map.Entry::getValue)
-                .forEach((msgId) -> bot.execute(new DeleteMessage(chatId, msgId)));
+        // bot.execute(new DeleteMessage(chatId, msgId));
     }
 
     public void StopBot(long chatId) {
@@ -40,14 +31,27 @@ public class ActionManager {
                     .setUrl(url)
                     .build();
 
-            News n = pr.getNews();
-            String msg = String.format("Titolo: \n%s\n\nDescrizione: \n%s\n\nUrl: \n%s\n\nData: \n%s",
-                    n.getTitle(), n.getDescription(), n.getUrl(), n.getDate());
+            String msg = String.format("""
+                            <b>Titolo:</b>\s
+                            <em>%s</em>
+
+                            <b>Descrizione:</b>\s
+                            <em>%s</em>
+                            
+                            <b>Url:</b>\s
+                            <a href='%s'><em>Link</em></a>
+                            
+                            <b>Data:</b>\s
+                            <em>%s</em>""",
+                    pr.getNews().getTitle(), pr.getNews().getDescription(),
+                    pr.getNews().getUrl(), pr.getNews().getDate());
 
             chatIds.parallelStream().forEach(id -> {
                 try {
                     if (!lastNews.contains(msg)) {
-                        bot.execute(new SendMessage(id, msg));
+                        bot.execute(new SendMessage(id, msg)
+                                .parseMode(ParseMode.HTML)
+                                .disableWebPagePreview(true));
                         lastNews.add(msg);
                     }
                 } catch (Exception e) {
