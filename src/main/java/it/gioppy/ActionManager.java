@@ -29,14 +29,11 @@ public class ActionManager {
     public CompletableFuture<Void> clearMessages(long chatId, int size) {
         return CompletableFuture.runAsync(() -> {
             int start = lastMessagesSize.getOrDefault(chatId, 1);
-            System.out.printf("Start %s | id: %s", start, chatId);
 
             for (int i = start; i <= size; i++) {
                 try {
                     bot.execute(new DeleteMessage(chatId, i));
-                } catch (Exception e) {
-                    System.err.println("Errore nell'eliminazione del messaggio " + i + ": " + e.getMessage());
-                }
+                } catch (Exception e) {  /* */}
             }
 
             lastMessagesSize.put(chatId, size);

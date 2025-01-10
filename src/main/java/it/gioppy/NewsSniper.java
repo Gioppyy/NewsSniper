@@ -1,5 +1,8 @@
 package it.gioppy;
 
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -10,6 +13,8 @@ import com.pengrad.telegrambot.TelegramBot;
 import java.util.concurrent.TimeUnit;
 import it.gioppy.storage.ChatStorage;
 import java.util.HashSet;
+
+import it.gioppy.storage.SqliteManager;
 import lombok.Getter;
 
 public class NewsSniper {
@@ -19,6 +24,8 @@ public class NewsSniper {
     private static final HashSet<Long> chatIds = ChatStorage.loadChatIds();
     @Getter
     private static final TelegramBot bot = new TelegramBot(Secret.token);
+    @Getter
+    private static final SqliteManager db = new SqliteManager();
 
     private static final List<String> urls = List.of(
             "https://feeds.bbci.co.uk/news/world/rss.xml"
@@ -26,6 +33,15 @@ public class NewsSniper {
 
     public static void main(String[] args) {
         final ActionManager am = new ActionManager();
+
+        try {
+            db.connect();
+            System.out.println("Connected to database");
+            db.createUserTable();
+            System.out.println("Created table");
+        } catch (SQLException e) {
+            System.out.println("[ERROR] Impossibile connettersi al db: " + e);
+        }
 
         sex.scheduleAtFixedRate(() -> {
             urls.parallelStream().forEach(am::sendNews);
