@@ -3,40 +3,42 @@ package it.gioppy;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.SendMessage;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import com.pengrad.telegrambot.TelegramBot;
-import it.gioppy.storage.ChatStorage;
 import it.gioppy.rss.RssParser;
+import it.gioppy.storage.SqliteManager;
+
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ActionManager {
-    private final ConcurrentHashMap<Long, Integer> lastMessagesSize = new ConcurrentHashMap<>();
-    private final HashSet<Long> chatIds = NewsSniper.getChatIds();
+    private final ExecutorService CLEAR_THREAD = Executors.newSingleThreadExecutor();
     private final HashSet<String> lastNews = new HashSet<>();
+    private final SqliteManager db = NewsSniper.getDb();
     private final TelegramBot bot = NewsSniper.getBot();
 
-    private final ExecutorService CLEAR_THREAD = Executors.newWorkStealingPool(
-            Math.min(Runtime.getRuntime().availableProcessors(), chatIds.size())
-    );
-
-    public ActionManager() {
-        chatIds.forEach(chatId -> lastMessagesSize.putIfAbsent(chatId, 0));
-    }
+    public ActionManager() {}
 
     public CompletableFuture<Void> clearMessages(long chatId, int size) {
         return CompletableFuture.runAsync(() -> {
-            int start = lastMessagesSize.getOrDefault(chatId, 1);
+            int start = 0;
+            try {
+                String query = "SELECT last_clear_id FROM users WHERE chat_id = ?";
+                ResultSet rs = db.executeQuery(query, chatId);
 
-            for (int i = start; i <= size; i++) {
-                try {
-                    bot.execute(new DeleteMessage(chatId, i));
-                } catch (Exception e) {  /* */}
-            }
+                if (rs!= null && rs.next())
+                    start = rs.getInt("last_clear_id");
 
-            lastMessagesSize.put(chatId, size);
+                for (int i = start; i <= size; i++) {
+                    try {
+                        bot.execute(new DeleteMessage(chatId, i));
+                    } catch (Exception e) {  /* ignore */ }
+                }
+            } catch (SQLException e) { /* ignore */ }
         }, CLEAR_THREAD).exceptionally(e -> {
             System.err.println("Errore nel task: " + e.getMessage());
             return null;
@@ -44,15 +46,17 @@ public class ActionManager {
     }
 
     public void StopBot(long chatId) {
-        if (chatIds.contains(chatId)) {
-            chatIds.remove(chatId);
-            ChatStorage.saveChatIds(chatIds);
+        try {
+            db.executeUpdate("DELETE FROM users WHERE chat_id = ?", chatId);
+            NewsSniper.getChatIds().remove(chatId);
+        } catch (Exception e) {
+            System.out.println("[ERROR] Impossibile cancellare l'utente: " + e);
         }
     }
 
     public void sendNews(String url) {
         try {
-            RssParser pr = new RssParser()
+            RssParser rp = new RssParser()
                     .setUrl(url)
                     .build();
 
@@ -68,10 +72,10 @@ public class ActionManager {
                             
                             <b>Data:</b>\s
                             <em>%s</em>""",
-                    pr.getNews().getTitle(), pr.getNews().getDescription(),
-                    pr.getNews().getUrl(), pr.getNews().getDate());
+                    rp.getNews().getTitle(), rp.getNews().getDescription(),
+                    rp.getNews().getUrl(), rp.getNews().getDate());
 
-            chatIds.parallelStream().forEach(id -> {
+            NewsSniper.getChatIds().parallelStream().forEach(id -> {
                 try {
                     if (!lastNews.contains(msg)) {
                         bot.execute(new SendMessage(id, msg)
@@ -82,7 +86,6 @@ public class ActionManager {
                     System.out.println("[ERROR] Errore durante l'invio del messaggio: " + e.getMessage());
                 }
             });
-
         } catch (Exception e) {
             System.out.println("Errore durante la lettura delle news all'url: " + url);
         }

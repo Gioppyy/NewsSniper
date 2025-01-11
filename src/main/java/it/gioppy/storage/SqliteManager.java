@@ -1,6 +1,7 @@
 package it.gioppy.storage;
 
 import java.sql.*;
+import java.util.HashSet;
 
 public class SqliteManager {
 
@@ -11,8 +12,6 @@ public class SqliteManager {
     public SqliteManager() {}
 
     public void connect() throws SQLException {
-        System.out.println("DB Path: " + DB_PATH);
-
         if (connection == null || connection.isClosed()) {
             connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
         }
@@ -29,9 +28,23 @@ public class SqliteManager {
         executeUpdate(query);
     }
 
+    public HashSet<Long> getAllIds() {
+        try {
+            HashSet<Long> ids = new HashSet<>();
+            ResultSet s = executeQuery("SELECT * FROM users");
+
+            while (s.next())
+                ids.add(s.getLong("chat_id"));
+
+            return ids;
+        } catch (SQLException e) {
+            return new HashSet<>();
+        }
+    }
+
 
     public ResultSet executeQuery(String query, Object... params) throws SQLException {
-        try (PreparedStatement statement = prepareStatement(query, params);){
+        try (PreparedStatement statement = prepareStatement(query, params)){
             return statement.executeQuery();
         } catch (Exception exp) {
             System.out.println("[ERROR] Errore nell'esecuzione della query: " + query);

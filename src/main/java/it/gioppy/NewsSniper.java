@@ -1,9 +1,8 @@
 package it.gioppy;
 
-import java.io.IOException;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledExecutorService;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -11,7 +10,6 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.TelegramBot;
 import java.util.concurrent.TimeUnit;
-import it.gioppy.storage.ChatStorage;
 import java.util.HashSet;
 
 import it.gioppy.storage.SqliteManager;
@@ -21,11 +19,11 @@ public class NewsSniper {
     @Getter
     private static final ScheduledExecutorService sex = new ScheduledThreadPoolExecutor(2);
     @Getter
-    private static final HashSet<Long> chatIds = ChatStorage.loadChatIds();
-    @Getter
     private static final TelegramBot bot = new TelegramBot(Secret.token);
     @Getter
     private static final SqliteManager db = new SqliteManager();
+    @Getter
+    private static HashSet<Long> chatIds = new HashSet<>();
 
     private static final List<String> urls = List.of(
             "https://feeds.bbci.co.uk/news/world/rss.xml"
@@ -36,9 +34,12 @@ public class NewsSniper {
 
         try {
             db.connect();
-            System.out.println("Connected to database");
+            System.out.println("[SUCCE] Connected to database");
             db.createUserTable();
-            System.out.println("Created table");
+            System.out.println("[SUCCE] Created table");
+            CompletableFuture.runAsync(() -> {
+                chatIds = db.getAllIds();
+            });
         } catch (SQLException e) {
             System.out.println("[ERROR] Impossibile connettersi al db: " + e);
         }
@@ -52,17 +53,27 @@ public class NewsSniper {
                 if (update.message() != null && update.message().text() != null) {
                     String messageText = update.message().text();
                     long chatId = update.message().chat().id();
-                    System.out.println(update.message().messageId() + " " + update.message().chat().id());
 
                     switch (messageText.toLowerCase()) {
                         case "/start":
                             bot.execute(new SendMessage(chatId, "Benvenuto!"));
-                            chatIds.add(chatId);
-                            ChatStorage.saveChatIds(chatIds);
+                            if (!chatIds.contains(chatId)) {
+                                try {
+                                    db.executeUpdate("INSERT INTO users(chat_id) VALUES (?)", chatId);
+                                } catch (SQLException e) {
+                                    System.out.println("[ERROR] Impossibile inserire l'id: " + e);
+                                }
+                                chatIds.add(chatId);
+                            }
                             break;
                         case "/clear":
                             final int size = update.message().messageId();
                             am.clearMessages(chatId, size).join();
+                            try {
+                                db.executeUpdate("UPDATE users SET last_clear_id = ? WHERE chat_id = ?", size, chatId);
+                            } catch (SQLException e) {
+                                System.out.println("[ERROR] Impossibile aggiornare l'id: " + e);
+                            }
                             bot.execute(new SendMessage(chatId, "Tutta la chat è stata cancellata!"));
                             break;
                         case "/stop":
