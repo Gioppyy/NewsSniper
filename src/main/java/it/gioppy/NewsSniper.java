@@ -26,7 +26,11 @@ public class NewsSniper {
     private static HashSet<Long> chatIds = new HashSet<>();
 
     private static final List<String> urls = List.of(
-            "https://feeds.bbci.co.uk/news/world/rss.xml"
+            "https://feeds.bbci.co.uk/news/world/rss.xml",
+            "http://rss.cnn.com/rss/edition_world.rss",
+            "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+            "https://feeds.nbcnews.com/nbcnews/public/world",
+            "https://www.rainews.it/rss/tutti"
     );
 
     public static void main(String[] args) {
@@ -34,14 +38,14 @@ public class NewsSniper {
 
         try {
             db.connect();
-            System.out.println("[SUCCE] Connected to database");
+            am.success("Connected to database");
             db.createUserTable();
-            System.out.println("[SUCCE] Created table");
+            am.success("Created table");
             CompletableFuture.runAsync(() -> {
                 chatIds = db.getAllIds();
             });
         } catch (SQLException e) {
-            System.out.println("[ERROR] Impossibile connettersi al db: " + e);
+            am.error("Impossibile connettersi al db: " + e);
         }
 
         sex.scheduleAtFixedRate(() -> {
@@ -51,37 +55,22 @@ public class NewsSniper {
         bot.setUpdatesListener((updates) -> {
             for (Update update : updates) {
                 if (update.message() != null && update.message().text() != null) {
-                    String messageText = update.message().text();
-                    long chatId = update.message().chat().id();
+                    final String messageText = update.message().text();
+                    final long chatId = update.message().chat().id();
+                    final int size = update.message().messageId();
 
                     switch (messageText.toLowerCase()) {
                         case "/start":
-                            bot.execute(new SendMessage(chatId, "Benvenuto!"));
-                            if (!chatIds.contains(chatId)) {
-                                try {
-                                    db.executeUpdate("INSERT INTO users(chat_id) VALUES (?)", chatId);
-                                } catch (SQLException e) {
-                                    System.out.println("[ERROR] Impossibile inserire l'id: " + e);
-                                }
-                                chatIds.add(chatId);
-                            }
+                            am.addChatId(chatId);
                             break;
                         case "/clear":
-                            final int size = update.message().messageId();
                             am.clearMessages(chatId, size).join();
-                            try {
-                                db.executeUpdate("UPDATE users SET last_clear_id = ? WHERE chat_id = ?", size, chatId);
-                            } catch (SQLException e) {
-                                System.out.println("[ERROR] Impossibile aggiornare l'id: " + e);
-                            }
-                            bot.execute(new SendMessage(chatId, "Tutta la chat è stata cancellata!"));
                             break;
-                        case "/stop":
-                            bot.execute(new SendMessage(chatId, "Bot fermato!"));
-                            am.StopBot(chatId);
+                        case "/stpcls":
+                            am.stopBot(chatId);
                             break;
                         default:
-                            bot.execute(new SendMessage(chatId, "[DEBUG] Il bot funziona!"));
+                            am.sendCmd(chatId);
                             break;
                     }
                 }
@@ -92,7 +81,7 @@ public class NewsSniper {
                 e.response().errorCode();
                 e.response().description();
             } else {
-                System.out.println("Errore durante la lettura della update: " + e.getMessage());
+                am.error("Errore durante la lettura della update: " + e.getMessage());
             }
         });
     }

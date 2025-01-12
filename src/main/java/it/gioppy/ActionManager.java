@@ -20,6 +20,7 @@ public class ActionManager {
     private final HashSet<String> lastNews = new HashSet<>();
     private final SqliteManager db = NewsSniper.getDb();
     private final TelegramBot bot = NewsSniper.getBot();
+    private final HashSet<Long> chatIds = NewsSniper.getChatIds();
 
     public ActionManager() {}
 
@@ -38,19 +39,39 @@ public class ActionManager {
                         bot.execute(new DeleteMessage(chatId, i));
                     } catch (Exception e) {  /* ignore */ }
                 }
+
+                db.executeUpdate("UPDATE users SET last_clear_id = ? WHERE chat_id = ?", size, chatId);
             } catch (SQLException e) { /* ignore */ }
+            finally {
+                bot.execute(new SendMessage(chatId, "Tutta la chat e' stata cancellata!"));
+            }
         }, CLEAR_THREAD).exceptionally(e -> {
-            System.err.println("Errore nel task: " + e.getMessage());
+            error("Errore nel task: " + e.getMessage());
             return null;
         });
     }
 
-    public void StopBot(long chatId) {
+    public void addChatId(long chatId) {
+        if (!chatIds.contains(chatId)) {
+            try {
+                db.executeUpdate("INSERT INTO users(chat_id) VALUES (?)", chatId);
+            } catch (SQLException e) {
+                error("Impossibile inserire l'id: " + e);
+            } finally {
+                chatIds.add(chatId);
+                bot.execute(new SendMessage(chatId, "Benvenuto!"));
+            }
+        }
+    }
+
+    public void stopBot(long chatId) {
         try {
+            clearMessages(chatId).join();
             db.executeUpdate("DELETE FROM users WHERE chat_id = ?", chatId);
             NewsSniper.getChatIds().remove(chatId);
+            bot.execute(new SendMessage(chatId, "Il bot e' stato fermato e la chat verra' pulita a breve!"));
         } catch (Exception e) {
-            System.out.println("[ERROR] Impossibile cancellare l'utente: " + e);
+            error("Impossibile cancellare l'utente: " + e);
         }
     }
 
@@ -83,11 +104,34 @@ public class ActionManager {
                         lastNews.add(msg);
                     }
                 } catch (Exception e) {
-                    System.out.println("[ERROR] Errore durante l'invio del messaggio: " + e.getMessage());
+                    error("Errore durante l'invio del messaggio: " + e.getMessage());
                 }
             });
         } catch (Exception e) {
-            System.out.println("Errore durante la lettura delle news all'url: " + url);
+            error("Errore durante la lettura delle news all'url: " + url);
         }
     }
+
+    public void sendCmd(long chatId){
+        String commands = """
+                <b>COMANDI DEL BOT:</b>
+                <blockquote>- <em><b>/start</b></em>               
+                    <em>Avvio del bot</em>\s
+                - <em><b>/clear</b></em>
+                    <em>Pulisce la chat del bot, ma rimane in esecuzione.</em>\s
+                - <em><b>/stpcls</b></em>
+                    <em>Ferma l'esecuzione del bot, e cancella la chat.</em>
+                </blockquote>
+
+                                         """;
+
+        try {
+            bot.execute(new SendMessage(chatId, commands).parseMode(ParseMode.HTML));
+        } catch(Exception e) {
+            error("Impossibile inviare i comandi alla chat: " + chatId);
+        }
+    }
+
+    public void error(String str) { System.out.println("\\033[31m[ERROR]" + str + "\\033[0m"); }
+    public void success(String str) { System.out.println("\\033[32m[SUCCE]" + str + "\\033[0m"); }
 }
