@@ -39,7 +39,6 @@ public class NewsSniper {
             db.connect();
             am.success("Connected to database");
             db.createUserTable();
-            am.success("Created table");
             CompletableFuture.runAsync(() -> {
                 chatIds = db.getAllIds();
             });
@@ -49,7 +48,7 @@ public class NewsSniper {
 
         sex.scheduleAtFixedRate(() -> {
             urls.parallelStream().forEach(am::sendNews);
-        }, 0, 20, TimeUnit.SECONDS);
+        }, 2, 5, TimeUnit.MINUTES);
 
         bot.setUpdatesListener((updates) -> {
             for (Update update : updates) {
@@ -57,6 +56,10 @@ public class NewsSniper {
                     final String messageText = update.message().text();
                     final long chatId = update.message().chat().id();
                     final int size = update.message().messageId();
+
+                    if (!chatIds.contains(chatId) && !messageText.equalsIgnoreCase("/start")) {
+                        return UpdatesListener.CONFIRMED_UPDATES_ALL;
+                    }
 
                     switch (messageText.toLowerCase()) {
                         case "/start":

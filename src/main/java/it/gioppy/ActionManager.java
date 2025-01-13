@@ -4,20 +4,24 @@ import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.SendMessage;
 
+import java.security.MessageDigest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import com.pengrad.telegrambot.TelegramBot;
 import it.gioppy.rss.RssParser;
 import it.gioppy.storage.SqliteManager;
 
 import java.util.HashSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ActionManager {
     private final ExecutorService CLEAR_THREAD = Executors.newSingleThreadExecutor();
-    private final HashSet<String> lastNews = new HashSet<>();
+    private final Map<String, Set<Long>> lastNews = new ConcurrentHashMap<>();
     private final SqliteManager db = NewsSniper.getDb();
     private final TelegramBot bot = NewsSniper.getBot();
     private final HashSet<Long> chatIds = NewsSniper.getChatIds();
@@ -80,6 +84,8 @@ public class ActionManager {
 
     public void sendNews(String url) {
         try {
+            final MessageDigest md = MessageDigest.getInstance("SHA-256");
+
             RssParser rp = new RssParser()
                     .setUrl(url)
                     .build();
@@ -99,12 +105,18 @@ public class ActionManager {
                     rp.getNews().getTitle(), rp.getNews().getDescription(),
                     rp.getNews().getUrl(), rp.getNews().getDate());
 
+            byte[] bytes = md.digest(msg.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes)
+                sb.append(String.format("%02x", b));
+            String hash = sb.toString();
+
             NewsSniper.getChatIds().parallelStream().forEach(id -> {
                 try {
-                    if (!lastNews.contains(msg)) {
+                    Set<Long> ids = lastNews.computeIfAbsent(hash, (err) -> new HashSet<>());
+                    if (ids.add(id)) {
                         bot.execute(new SendMessage(id, msg)
                                 .parseMode(ParseMode.HTML));
-                        lastNews.add(msg);
                     }
                 } catch (Exception e) {
                     error("Errore durante l'invio del messaggio: " + e.getMessage());
