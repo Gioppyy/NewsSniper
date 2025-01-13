@@ -37,12 +37,15 @@ public class ActionManager {
                 for (int i = start; i <= size; i++) {
                     try {
                         bot.execute(new DeleteMessage(chatId, i));
-                    } catch (Exception e) {  /* ignore */ }
+                    } catch (Exception e) { 
+                        error("Impossibile cancellare il messaggio: " + e.getMessage());
+                    }
                 }
 
                 db.executeUpdate("UPDATE users SET last_clear_id = ? WHERE chat_id = ?", size, chatId);
-            } catch (SQLException e) { /* ignore */ }
-            finally {
+            } catch (SQLException e) {
+                error("Impossibile eseguire la query: " + e.getMessage());
+            } finally {
                 bot.execute(new SendMessage(chatId, "Tutta la chat e' stata cancellata!"));
             }
         }, CLEAR_THREAD).exceptionally(e -> {
@@ -64,9 +67,9 @@ public class ActionManager {
         }
     }
 
-    public void stopBot(long chatId) {
+    public void stopBot(long chatId, int size) {
         try {
-            clearMessages(chatId).join();
+            clearMessages(chatId, size).join();
             db.executeUpdate("DELETE FROM users WHERE chat_id = ?", chatId);
             NewsSniper.getChatIds().remove(chatId);
             bot.execute(new SendMessage(chatId, "Il bot e' stato fermato e la chat verra' pulita a breve!"));

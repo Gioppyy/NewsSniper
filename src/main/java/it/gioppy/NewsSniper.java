@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledExecutorService;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.TelegramBot;
@@ -67,7 +66,7 @@ public class NewsSniper {
                             am.clearMessages(chatId, size).join();
                             break;
                         case "/stpcls":
-                            am.stopBot(chatId);
+                            am.stopBot(chatId, size);
                             break;
                         default:
                             am.sendCmd(chatId);
