@@ -63,7 +63,7 @@ public class NewsSniper {
                             am.addChatId(chatId);
                             break;
                         case "/clear":
-                            am.clearMessages(chatId, size).join();
+                            am.clearMessages(chatId, size);
                             break;
                         case "/stpcls":
                             am.stopBot(chatId, size);
