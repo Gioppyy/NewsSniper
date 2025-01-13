@@ -29,16 +29,21 @@ public class SqliteManager {
     }
 
     public HashSet<Long> getAllIds() {
+        final HashSet<Long> ids = new HashSet<>();
         try {
-            HashSet<Long> ids = new HashSet<>();
-            ResultSet s = executeQuery("SELECT * FROM users");
+            ResultSet s = executeQuery("SELECT chat_id FROM users;");
 
-            while (s.next())
-                ids.add(s.getLong("chat_id"));
+            while (s != null && s.next()) {
+                long chatId = s.getLong(1);
+                System.out.println("Trovato chat_id: " + chatId);
+                ids.add(chatId);
+            }
 
+            System.out.println("Totale ID trovati: " + ids.size());
             return ids;
         } catch (SQLException e) {
-            return new HashSet<>();
+            System.out.println("Errore: " + e.getMessage());
+            return ids;
         }
     }
 

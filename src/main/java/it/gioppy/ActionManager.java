@@ -67,6 +67,7 @@ public class ActionManager {
             } finally {
                 chatIds.add(chatId);
                 bot.execute(new SendMessage(chatId, "Benvenuto!"));
+                success("Aggiunto un nuovo utente! " + chatId);
             }
         }
     }

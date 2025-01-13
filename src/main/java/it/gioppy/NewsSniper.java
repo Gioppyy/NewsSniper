@@ -39,9 +39,8 @@ public class NewsSniper {
             db.connect();
             am.success("Connected to database");
             db.createUserTable();
-            CompletableFuture.runAsync(() -> {
-                chatIds = db.getAllIds();
-            });
+            chatIds = db.getAllIds();
+            am.success("Utenti registrati: " + chatIds);
         } catch (SQLException e) {
             am.error("Impossibile connettersi al db: " + e);
         }
