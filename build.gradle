@@ -1,9 +1,14 @@
 plugins {
-    id 'groovy'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
 group = 'it.gioppy'
-version = '1.0-SNAPSHOT'
+version = '1.0'
+
+application {
+    mainClassName = "it.gioppy.NewsSniper"
+}
 
 repositories {
     mavenCentral()
@@ -15,7 +20,14 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.36'
     annotationProcessor 'org.projectlombok:lombok:1.18.36'
     implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
+}
 
+shadowJar {
+    manifest {
+        attributes(
+                'Main-Class': 'it.gioppy.NewsSniper'
+        )
+    }
 }
 
 test {

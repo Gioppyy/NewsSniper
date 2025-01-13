@@ -6,7 +6,7 @@ import java.util.HashSet;
 public class SqliteManager {
 
     private final String PROJECT_PATH = System.getProperty("user.dir");
-    private final String DB_PATH = PROJECT_PATH + "/src/main/resources/storage.db";
+    private final String DB_PATH = PROJECT_PATH + "/storage.db";
     private Connection connection;
 
     public SqliteManager() {}
