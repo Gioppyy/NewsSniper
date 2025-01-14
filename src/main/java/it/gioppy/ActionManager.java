@@ -24,7 +24,6 @@ public class ActionManager {
     private final Map<String, Set<Long>> lastNews = new ConcurrentHashMap<>();
     private final SqliteManager db = NewsSniper.getDb();
     private final TelegramBot bot = NewsSniper.getBot();
-    private final HashSet<Long> chatIds = NewsSniper.getChatIds();
 
     public ActionManager() {}
 
@@ -35,8 +34,8 @@ public class ActionManager {
                 String query = "SELECT last_clear_id FROM users WHERE chat_id = ?";
                 ResultSet rs = db.executeQuery(query, chatId);
 
-                if (rs!= null && rs.next())
-                    start = rs.getInt("last_clear_id");
+                start = rs.getInt("last_clear_id");
+                rs.close();
 
                 for (int i = start; i <= size; i++) {
                     try {
@@ -59,6 +58,7 @@ public class ActionManager {
     }
 
     public void addChatId(long chatId) {
+        final HashSet<Long> chatIds = NewsSniper.getChatIds();
         if (!chatIds.contains(chatId)) {
             try {
                 db.executeUpdate("INSERT INTO users(chat_id) VALUES (?)", chatId);
@@ -69,6 +69,26 @@ public class ActionManager {
                 bot.execute(new SendMessage(chatId, "Benvenuto!"));
                 success("Aggiunto un nuovo utente! " + chatId);
             }
+        }
+    }
+
+    public HashSet<Long> getAllIds() {
+        final HashSet<Long> ids = new HashSet<>();
+        try (ResultSet s = db.executeQuery("SELECT chat_id FROM users;")){
+            if (s == null) {
+                error("Errore nell'esecuzione della query");
+                return ids;
+            }
+
+            while (s.next()) {
+                ids.add(s.getLong(1));
+            }
+
+            s.close();
+            return ids;
+        } catch (SQLException e) {
+            System.out.println("Errore: " + e.getMessage());
+            return ids;
         }
     }
 

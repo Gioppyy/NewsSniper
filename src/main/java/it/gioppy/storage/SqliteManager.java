@@ -21,41 +21,16 @@ public class SqliteManager {
         String query = """
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    chat_id BIGINT NOT NULL,
+                    chat_id BIGINT NOT NULL UNIQUE,
                     last_clear_id INT NOT NULL DEFAULT 0
                 )
                 """;
         executeUpdate(query);
     }
 
-    public HashSet<Long> getAllIds() {
-        final HashSet<Long> ids = new HashSet<>();
-        try {
-            ResultSet s = executeQuery("SELECT chat_id FROM users;");
-
-            while (s != null && s.next()) {
-                long chatId = s.getLong(1);
-                System.out.println("Trovato chat_id: " + chatId);
-                ids.add(chatId);
-            }
-
-            System.out.println("Totale ID trovati: " + ids.size());
-            return ids;
-        } catch (SQLException e) {
-            System.out.println("Errore: " + e.getMessage());
-            return ids;
-        }
-    }
-
-
     public ResultSet executeQuery(String query, Object... params) throws SQLException {
-        try (PreparedStatement statement = prepareStatement(query, params)){
-            return statement.executeQuery();
-        } catch (Exception exp) {
-            System.out.println("[ERROR] Errore nell'esecuzione della query: " + query);
-            System.out.println("[ERROR] " + exp.getMessage());
-            return null;
-        }
+        PreparedStatement statement = prepareStatement(query, params);
+        return statement.executeQuery();
     }
 
     public int executeUpdate(String query, Object... params) throws SQLException {

@@ -39,7 +39,7 @@ public class NewsSniper {
             db.connect();
             am.success("Connected to database");
             db.createUserTable();
-            chatIds = db.getAllIds();
+            chatIds = am.getAllIds();
             am.success("Utenti registrati: " + chatIds);
         } catch (SQLException e) {
             am.error("Impossibile connettersi al db: " + e);
