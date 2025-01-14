@@ -47,7 +47,7 @@ public class NewsSniper {
 
         sex.scheduleAtFixedRate(() -> {
             urls.parallelStream().forEach(am::sendNews);
-        }, 2, 5, TimeUnit.MINUTES);
+        }, 0, 5, TimeUnit.MINUTES);
 
         bot.setUpdatesListener((updates) -> {
             for (Update update : updates) {

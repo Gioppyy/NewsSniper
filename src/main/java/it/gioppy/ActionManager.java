@@ -110,21 +110,17 @@ public class ActionManager {
             RssParser rp = new RssParser()
                     .setUrl(url)
                     .build();
+            String descrizione = rp.getNews().getDescription();
+            descrizione = descrizione.isEmpty() ? "Nessuna descrizione." : descrizione;
 
             String msg = String.format("""
-                            <b>Titolo:</b>\s
-                            <em>%s</em>
-
-                            <b>Descrizione:</b>\s
-                            <em>%s</em>
+                            📣 <a href='%s'><b>%s</b></a> 📣\s
                             
-                            <b>Url:</b>\s
-                            <a href='%s'><em>Link</em></a>
+                            <b>Descrizione:</b> <em>%s</em>\s
                             
-                            <b>Data:</b>\s
-                            <em>%s</em>""",
-                    rp.getNews().getTitle(), rp.getNews().getDescription(),
-                    rp.getNews().getUrl(), rp.getNews().getDate());
+                            <b><em>%s</em></b>""",
+                    rp.getNews().getUrl(), rp.getNews().getTitle(),
+                    descrizione, rp.getNews().getDate());
 
             byte[] bytes = md.digest(msg.getBytes());
             StringBuilder sb = new StringBuilder();
