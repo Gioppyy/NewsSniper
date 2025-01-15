@@ -104,15 +104,19 @@ public class ActionManager {
     }
 
     public void sendNews(String url) {
+
         try {
             final MessageDigest md = MessageDigest.getInstance("SHA-256");
 
             RssParser rp = new RssParser()
                     .setUrl(url)
                     .build();
+
+            if (rp.getNews() == null)
+                return;
+            
             String descrizione = rp.getNews().getDescription();
             descrizione = descrizione.isEmpty() ? "Nessuna descrizione." : descrizione;
-
             String msg = String.format("""
                             📣 <a href='%s'><b>%s</b></a> 📣\s
                             
