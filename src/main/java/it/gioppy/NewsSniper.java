@@ -29,7 +29,8 @@ public class NewsSniper {
             "http://rss.cnn.com/rss/edition_world.rss",
             "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
             "https://feeds.nbcnews.com/nbcnews/public/world",
-            "https://www.rainews.it/rss/tutti"
+            "https://www.rainews.it/rss/ultimora",
+            "https://www.rainews.it/rss/esteri"
     );
 
     public static void main(String[] args) {
